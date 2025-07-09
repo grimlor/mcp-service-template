@@ -1,22 +1,25 @@
 from pathlib import Path
+
 from mcp.server.fastmcp.prompts import base
+
 from service_name_mcp.mcp_instance import mcp
+
 
 def _load_prompt_content(prompt_file: str) -> str:
     """
     Load prompt content from markdown files.
-    
+
     Args:
         prompt_file: Name of the prompt file to load
-        
+
     Returns:
         Content of the prompt file
     """
     current_dir = Path(__file__).parent
     prompt_path = current_dir / "prompts" / prompt_file
-    
+
     try:
-        with open(prompt_path, 'r', encoding='utf-8') as f:
+        with open(prompt_path, encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return f"Error: Could not find prompt file at {prompt_path}"
@@ -28,7 +31,7 @@ def _load_prompt_content(prompt_file: str) -> str:
 def domain_analyst() -> list[base.Message]:
     """
     Expert Domain Analyst prompt for analyzing data using this service.
-    
+
     Customize this prompt for your specific domain and use case.
     """
     return [
@@ -38,7 +41,8 @@ def domain_analyst() -> list[base.Message]:
             "📊 **Data Analysis** (metrics, trends, performance analysis)\n"
             "🔍 **Data Exploration** (queries, schemas, data sampling)\n"
             "🛠️ **Troubleshooting** (investigating issues, validating data)\n\n"
-            "Feel free to ask me any questions or request any analysis you need!"),
+            "Feel free to ask me any questions or request any analysis you need!"
+        ),
     ]
 
 
@@ -46,7 +50,7 @@ def domain_analyst() -> list[base.Message]:
 def report_issue() -> str:
     """
     Report issues and data quality problems in the system.
-    
+
     Customize this for your specific issue tracking system.
     """
     return _load_prompt_content("report_bug_prompt.md")
@@ -56,10 +60,10 @@ def report_issue() -> str:
 def investigate_issue(issue_id: str) -> str:
     """
     Investigate a specific issue in the system by ID.
-    
+
     Args:
         issue_id: Issue ID to investigate
-        
+
     Customize this for your specific issue tracking system.
     """
     prompt_content = _load_prompt_content("investigate_bug_prompt.md")

@@ -2,20 +2,38 @@
 
 This guide walks you through customizing the MCP Service Template for your specific use case.
 
+> **⚡ Quick Start**: Most users should use the automated setup script (`python3 setup_template.py`) which handles all the steps below automatically. This guide is for advanced users who want to understand the process or need manual customization.
+
+## 🎯 Automated vs Manual Setup
+
+### Automated Setup (Recommended) ✨
+```bash
+python3 setup_template.py
+```
+- Creates clean project copy with smart exclusions
+- Replaces all placeholders automatically
+- Handles directory renaming and import updates
+- Sets up modern tooling and quality checks
+- No manual cleanup required
+
+### Manual Setup (Advanced Users) 🔧
+Follow the detailed steps below if you need custom modifications during setup.
+
 ## 🎯 Quick Start Checklist
 
 Follow this checklist to customize the template:
 
 ### 1. **Basic Setup** ✅
-- [ ] Clone/copy the template to your new project directory
-- [ ] Replace all `{{service_name}}` placeholders with your actual service name
-- [ ] Replace all `{{Service Name}}` placeholders with your display name
-- [ ] Replace all `{{Domain}}` placeholders with your business domain
-- [ ] Update `pyproject.toml` with your service details
+- [ ] Use automated setup: `python3 setup_template.py` (recommended)
+- [ ] **OR** manually replace all `{{service_name}}` placeholders with your actual service name
+- [ ] **OR** manually replace all `{{Service Name}}` placeholders with your display name
+- [ ] **OR** manually replace all `{{Domain}}` placeholders with your business domain
+- [ ] **OR** manually update `pyproject.toml.template` → `pyproject.toml` with your service details
 
 ### 2. **Directory Structure** ✅
-- [ ] Rename `src/service_name_mcp/` to `src/your_service_mcp/`
-- [ ] Update import statements throughout the codebase
+- [ ] Use automated setup for clean project creation (recommended)
+- [ ] **OR** manually rename `src/service_name_mcp/` to `src/your_service_mcp/`
+- [ ] **OR** manually update import statements throughout the codebase
 - [ ] Remove example domains you don't need
 - [ ] Add your specific domain modules
 
@@ -43,7 +61,16 @@ Follow this checklist to customize the template:
 - [ ] Create test data and fixtures
 - [ ] Set up continuous integration
 
-### 7. **Deployment** 🚀
+### 7. **Modern Development Workflow** 🚀
+- [ ] Install and use `uv` for fast dependency management
+- [ ] Set up automated quality checks with `uv run pre-commit install`
+- [ ] Use `ruff` for unified formatting and linting (replaces black, isort, flake8)
+- [ ] Run `uv run mypy src/` for type checking
+- [ ] Validate with `uv run pytest` for comprehensive testing
+
+**See [docs/DEVELOPMENT.md](../DEVELOPMENT.md) for complete workflow commands and troubleshooting.**
+
+### 8. **Deployment** 🚀
 - [ ] Configure your deployment environment
 - [ ] Set up authentication and permissions
 - [ ] Test end-to-end functionality
@@ -63,7 +90,7 @@ Follow this checklist to customize the template:
    [project]
    name = "your-service-mcp"
    description = "Your Service Description MCP Server"
-   
+
    [project.scripts]
    your-service-mcp = "your_service_mcp.server:main"
    ```
@@ -82,7 +109,7 @@ Update all import statements throughout the codebase:
 # Before
 from service_name_mcp.mcp_instance import mcp
 
-# After  
+# After
 from your_service_mcp.mcp_instance import mcp
 ```
 
@@ -92,7 +119,7 @@ Update `src/your_service_mcp/mcp_instance.py`:
 
 ```python
 mcp = FastMCP(
-    title="your-service-mcp-server", 
+    title="your-service-mcp-server",
     instructions="Your Service MCP server providing AI agents with access to your domain data and functionality"
 )
 ```
@@ -167,7 +194,7 @@ credential = DefaultAzureCredential()
 class CustomAuthenticator:
     def __init__(self):
         self.token = os.getenv("API_TOKEN")
-    
+
     def get_headers(self):
         return {"Authorization": f"Bearer {self.token}"}
 ```
@@ -180,15 +207,15 @@ Customize `src/your_service_mcp/common/config.py`:
 class Config:
     # Your service-specific configuration
     SERVICE_NAME = os.getenv("SERVICE_NAME", "your_service")
-    
+
     # Data source configuration
     DATABASE_URL = os.getenv("DATABASE_URL", "")
     API_ENDPOINT = os.getenv("API_ENDPOINT", "")
-    
+
     # Authentication
     CLIENT_ID = os.getenv("CLIENT_ID", "")
     CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
-    
+
     # Feature flags
     ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 ```
@@ -261,14 +288,11 @@ def test_end_to_end_workflow():
 
 #### Run Tests:
 ```bash
-# Run all tests
+# See docs/DEVELOPMENT.md for complete testing commands
 uv run pytest
 
-# Run with coverage
-uv run pytest --cov=src/your_service_mcp --cov-report=html
-
-# Run specific tests
-uv run pytest tests/test_your_domain/
+# Basic coverage check
+uv run pytest --cov=src/your_service_mcp
 ```
 
 ### Step 11: Documentation

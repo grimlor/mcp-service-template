@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mcp-service-template"
+name = "{{service_name}}-mcp"
 version = "0.1.0"
-description = "Template for creating Model Context Protocol (MCP) servers"
+description = "{{Service Description}} MCP Server"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -18,19 +18,26 @@ classifiers = [
 dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.6.0",
-    "requests>=2.25.0",
+    # Add your domain-specific dependencies here:
+    # "azure-kusto-data",           # For Kusto/Azure Data Explorer
+    # "azure-identity",             # For Azure authentication
+    # "azure-devops",               # For Azure DevOps integration
+    # "pandas>=1.5.0",              # For data manipulation
+    # "numpy>=1.21.0",              # For numerical operations
 ]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.16.1",
-    "pre-commit>=4.2.0",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.0.0",
-    "pytest-cov>=6.2.1",
-    "pytest-xdist>=3.6.0",
     "ruff>=0.12.2",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-asyncio>=1.0.0",
+    "pre-commit>=4.2.0"
 ]
+
+[project.scripts]
+{{service_name}}-mcp = "{{service_name}}_mcp.server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -95,46 +102,3 @@ markers = [
     "unit: Unit tests that don't require external dependencies",
     "slow: Tests that take a long time to run",
 ]
-
-[tool.coverage.run]
-source = ["src"]
-branch = true
-omit = [
-    "tests/*",
-    "src/*/test_*",
-    "src/*/*/test_*",
-    "*/__pycache__/*",
-    "*/migrations/*",
-    "*/venv/*",
-    "*/.venv/*",
-    "*/site-packages/*",
-]
-
-[tool.coverage.report]
-# Start with 50% target and work our way up to 80%
-fail_under = 50
-show_missing = true
-skip_covered = false
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
-    "except ImportError:",
-    # Allow defensive assertions
-    "assert.*",
-    # TYPE_CHECKING blocks
-    "if TYPE_CHECKING:",
-]
-
-[tool.coverage.html]
-directory = "htmlcov"
-
-[tool.coverage.xml]
-output = "coverage.xml"

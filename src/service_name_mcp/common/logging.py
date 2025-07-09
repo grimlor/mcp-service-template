@@ -13,3 +13,17 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)  # Change to DEBUG for more verbose logging
+
+
+def get_logger(name: str | None = None) -> logging.Logger:
+    """Get a logger instance for the given name.
+
+    Args:
+        name: Optional logger name. If not provided, returns the default service logger.
+
+    Returns:
+        Configured logger instance.
+    """
+    if name:
+        return logging.getLogger(f"{{service_name}}-mcp.{name}")
+    return logger

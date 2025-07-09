@@ -6,11 +6,12 @@ This module provides analytics-specific prompts and instructions for AI agents.
 
 from service_name_mcp.mcp_instance import mcp
 
+
 @mcp.prompt()
-def analytics_expert() -> str:
+def analyst_expert() -> str:
     """
     Expert Analytics Specialist prompt for advanced data analysis.
-    
+
     Customize this prompt for your specific analytics domain and capabilities.
     """
     return """# Expert {{Domain}} Analytics Specialist
@@ -40,7 +41,7 @@ You are an expert analytics specialist with deep knowledge of statistical analys
 - Separate rate effects from mix effects
 - Provide statistical significance testing
 
-### Trend Analysis  
+### Trend Analysis
 - Detect patterns over time
 - Identify seasonality and cycles
 - Compare performance across periods

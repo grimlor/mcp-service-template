@@ -27,12 +27,14 @@ python3 setup_template.py
 **⚠️ Important**: Run the setup script first before using `uv` commands, as the template contains placeholders that need to be replaced.
 
 This interactive script will:
-- Prompt for your service details (name, description, domain)
-- Replace all template placeholders automatically
-- Rename directories and update imports
-- Clean up template-specific files
+- ✨ **Create a clean project copy** in your target directory
+- 🔧 **Replace all template placeholders** automatically
+- 📁 **Rename directories and update imports** throughout the codebase
+- 🗑️ **Exclude contributor-only files** (git history, caches, IDE settings, lockfiles)
+- ⚙️ **Generate fresh configuration** from template files
+- 🪝 **Set up automated quality checks** with pre-commit hooks
 
-**After setup, you'll have a fully customized MCP service ready for development!**
+**After setup, you'll have a completely clean, fully customized MCP service ready for development - no manual cleanup required!**
 
 For detailed setup instructions, manual setup options, and troubleshooting, see [docs/SETUP.md](docs/SETUP.md).
 
@@ -51,59 +53,48 @@ The template includes these domain examples to demonstrate patterns using free, 
 
 This template uses [`uv`](https://docs.astral.sh/uv/) for dependency management, which provides:
 - ⚡ **10-100x faster** than pip
-- 🔒 **Better dependency resolution** with automatic conflict detection  
+- 🔒 **Better dependency resolution** with automatic conflict detection
 - 📦 **Reproducible builds** with lock files
 - 🛠️ **Integrated virtual environment** management
 
+**Quick Start After Setup:**
 ```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Navigate to your project directory
+cd path/to/your/new/project
 
-# Install dependencies and create virtual environment
+# Automatic setup with direnv (recommended)
+direnv allow
+
+# OR manual setup:
+# Create virtual environment and install dependencies
 uv sync --all-extras
 
-# Run formatting and linting (configured in pyproject.toml)
-uv run ruff format src/ tests/              # Code formatting
-uv run ruff check src/ tests/               # Linting
-uv run ruff check src/ tests/ --fix        # Auto-fix linting issues
-
-# Run type checking
-uv run mypy src/
-
-# Run tests
-uv run pytest
-
-# Run the MCP server
-uv run python3 -m {{service_name}}_mcp.server
-```
-
-### Automated Quality Checks (Git Hooks)
-
-The template includes pre-commit hooks that automatically run quality checks before each commit:
-
-```bash
-# One-time setup: install the git hooks
+# Set up automated quality checks
 uv run pre-commit install
 
-# The hooks will now run automatically on git commit
-# Or run manually on all files:
-uv run pre-commit run --all-files
+# Run tests to verify everything works
+uv run pytest
 ```
 
+For complete development workflow, testing commands, troubleshooting, and best practices, see **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
+
+### Automated Quality Checks
+
+The template includes pre-commit hooks that automatically run quality checks before each commit. These ensure consistent code quality and prevent common issues from reaching your repository.
+
 **What the hooks check:**
-- 🎨 **Code formatting** with `ruff format`
-- 🔍 **Linting** with `ruff check --fix`
+- 🎨 **Code formatting** with `ruff format` (replaces black)
+- 🔍 **Linting and style** with `ruff check --fix` (replaces flake8, isort, and more)
 - 🏷️ **Type checking** with `mypy`
 - 📝 **File consistency** (trailing whitespace, line endings, etc.)
-
-This ensures consistent code quality across all commits and prevents common issues from reaching your repository.
 
 ## 📁 Project Structure
 
 ```
 mcp-service-template/
 ├── README.md                           # This file
-├── pyproject.toml                      # Package configuration
+├── pyproject.toml                      # Package configuration (for contributors)
+├── pyproject.toml.template             # Template file (becomes pyproject.toml after setup)
 ├── MANIFEST.in                         # Include additional files in package
 ├── requirements.local.txt              # Local development dependencies
 ├── setup_template.py                   # Automated template setup script
@@ -162,65 +153,25 @@ mcp-service-template/
 │       ├── __init__.py
 │       └── test_analytics_tools.py    # Analytics domain tests
 └── docs/                              # Documentation
-    ├── SETUP.md                       # Detailed setup instructions
-    ├── CUSTOMIZATION.md               # Template customization guide
+    ├── SETUP.md                       # Quick setup guide
+    ├── DEVELOPMENT.md                 # Complete development workflow
+    ├── ARCHITECTURE.md                # Architectural patterns and design principles
+    ├── CUSTOMIZATION.md               # Advanced template customization
     └── examples/
         └── ECOMMERCE_EXAMPLE.md       # E-commerce integration example
 ```
 
 ## 🔧 Key Architectural Patterns
 
-### 1. **Modular Domain Organization**
-Each business domain has its own module with:
-- `*_tools.py` - MCP tool implementations
-- `*_config.py` - Domain-specific configuration
-- `*_prompts.py` - Domain-specific prompts (optional)
-- `*.md` - Best practices and documentation
+This template follows proven architectural patterns for maintainable, scalable MCP services:
 
-### 2. **Centralized MCP Instance**
-```python
-# mcp_instance.py
-from mcp.server.fastmcp import FastMCP
+- **🏗️ Modular Domain Organization** - Standardized structure for business domains
+- **🎯 Centralized MCP Instance** - Single FastMCP instance shared across domains
+- **🔌 Tool Registration Pattern** - Consistent tool implementation and error handling
+- **📝 Prompt System Pattern** - File-based prompt templates with structured loading
+- **⚙️ Configuration Management** - Environment-based config with validation
 
-mcp = FastMCP(
-    title="{{service_name}}-mcp-server", 
-    instructions="{{Service Description}}"
-)
-```
-
-### 3. **Tool Registration Pattern**
-```python
-# In tool modules
-from {{service_name}}_mcp.mcp_instance import mcp
-
-@mcp.tool(description="Tool description here")
-def my_tool(param: str) -> str:
-    """Tool implementation"""
-    return result
-```
-
-### 4. **Prompt System Pattern**
-```python
-# core_prompts.py
-@mcp.prompt()
-def domain_expert() -> list[base.Message]:
-    """Expert prompt for domain analysis"""
-    return [
-        base.UserMessage(_load_prompt_content("analyst_prompt.md")),
-        base.AssistantMessage("Ready to assist!")
-    ]
-```
-
-### 5. **Configuration Management**
-```python
-# common/config.py
-import os
-
-class Config:
-    SERVICE_NAME = os.getenv("SERVICE_NAME", "{{service_name}}")
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    # Add your configuration here
-```
+For complete architectural patterns, design principles, and implementation examples, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## 🔌 Available Tool Domains
 
@@ -230,7 +181,7 @@ class Config:
 - Best practices for SQL operations
 - Connection management and transaction handling
 
-### REST API Domain (Example)  
+### REST API Domain (Example)
 - HTTP client integration with public APIs
 - Request/response handling and error management
 - Authentication patterns and rate limiting
@@ -270,15 +221,21 @@ The template includes sophisticated prompt patterns:
 # Run all tests
 uv run pytest
 
-# Run with coverage
-uv run pytest --cov=src/{{service_name}}_mcp --cov-report=html
+# Run tests with coverage report
+uv run pytest --cov
 
-# Run specific domain tests
-uv run pytest tests/test_sqlite_domain/
+# Generate HTML coverage report
+uv run pytest --cov --cov-report=html
+# Open htmlcov/index.html in your browser
 
-# Run integration tests
-uv run pytest tests/integration/
+# Run tests with coverage and fail if below 80%
+uv run pytest --cov --cov-fail-under=80
+
+# Run only fast unit tests (skip integration tests)
+uv run pytest -m "not integration"
 ```
+
+For complete testing commands, coverage options, and debugging tips, see **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 ## ✅ Template Validation
 
@@ -293,7 +250,7 @@ python3 validate_template.py
 
 This script checks:
 - Directory structure completeness
-- Essential files presence  
+- Essential files presence
 - Domain module completeness
 - Removal of platform-specific references
 - Template placeholder presence
@@ -303,16 +260,13 @@ This script checks:
 ## 📦 Packaging & Distribution
 
 ```bash
+# Install locally in development mode with development dependencies
+uv sync --all-extras
+
 # Build package
 uv build
 
-# Install locally in development mode
-uv sync --all-extras
-
-# Install with development dependencies
-uv sync --all-extras
-
-# Alternative: traditional pip install
+# Alternative: traditional pip install (if not using uv)
 pip install -e ".[dev]"
 ```
 
@@ -327,7 +281,7 @@ pip install -e ".[dev]"
 ## 📚 Further Reading
 
 - [Model Context Protocol Documentation](https://github.com/anthropics/mcp)
-- [FastMCP Documentation](https://github.com/mcp-host/fastmcp) 
+- [FastMCP Documentation](https://github.com/mcp-host/fastmcp)
 - [VS Code MCP Integration](https://docs.github.com/en/copilot)
 - [Python Authentication Libraries](https://python-poetry.org/docs/repositories/#configuring-credentials)
 
@@ -337,33 +291,49 @@ pip install -e ".[dev]"
 
 1. **Fork the template repository**
 2. **Make your changes** to domains, documentation, or core functionality
-3. **Validate your changes**:
+3. **Use modern development workflow**:
+   ```bash
+   # Setup (see docs/DEVELOPMENT.md for complete guide)
+   uv sync --all-extras
+   uv run pre-commit install
+
+   # Daily workflow
+   uv run ruff format src/ tests/
+   uv run ruff check src/ tests/ --fix
+   uv run mypy src/
+   uv run pytest
+   ```
+4. **Validate your changes**:
    ```bash
    # Ensure template integrity (includes syntax checking)
    python3 validate_template.py
-   
+
    # For faster syntax-only checking during development
    python3 validate_template.py --syntax-only
    ```
-4. **Test the template works end-to-end**:
+5. **Test the template works end-to-end**:
    ```bash
    # Copy template to test directory
    cp -r . /tmp/test-template
    cd /tmp/test-template
-   
+
    # Run setup (use test values)
    python3 setup_template.py
-   
+
    # Now uv should work on the instantiated template
    uv sync --all-extras
    uv run pytest
    ```
-5. **Create your feature branch** (`git checkout -b feature/amazing-feature`)
-6. **Commit your changes** (`git commit -m 'Add amazing feature'`)
-7. **Push to the branch** (`git push origin feature/amazing-feature`)
-8. **Open a Pull Request**
+6. **Create your feature branch** (`git checkout -b feature/amazing-feature`)
+7. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+8. **Push to the branch** (`git push origin feature/amazing-feature`)
+9. **Open a Pull Request**
 
-**Note**: Template contributors can't run `uv run pytest` directly on the template because it contains placeholder names. Use the validation script and end-to-end testing instead.
+**Note**: The template uses a dual `pyproject.toml` system:
+- `pyproject.toml` - For template contributors (this repo)
+- `pyproject.toml.template` - Template file that becomes `pyproject.toml` after user setup
+
+This allows both contributors and users to benefit from modern `uv` and `ruff` tooling!
 
 ### For Template Users:
 - Report issues or suggest improvements via GitHub Issues
@@ -378,8 +348,12 @@ This template is provided under the MIT License. See `LICENSE` file for details.
 
 ## 🎉 Template Customization Checklist
 
-### ⚡ Quick Option
-- [ ] Run `python3 setup_template.py` for automated setup
+### ⚡ Quick Option (Recommended)
+- [ ] Run `python3 setup_template.py` for fully automated setup
+- [ ] Answer the prompts for your service configuration
+- [ ] Navigate to your new project directory and start developing!
+
+The automated setup handles everything below automatically, creating a clean, production-ready project.
 
 ### 📋 Manual Option (if not using automated setup)
 - [ ] Update `pyproject.toml` with your service details

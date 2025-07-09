@@ -6,7 +6,7 @@ This example shows how to customize the MCP Service Template for an e-commerce a
 
 **Domain**: E-commerce Analytics
 **Goal**: Provide AI agents with access to sales data, customer analytics, and business intelligence
-**Data Sources**: 
+**Data Sources**:
 - Sales database (PostgreSQL)
 - Customer data warehouse (Snowflake)
 - Marketing analytics (Google Analytics API)
@@ -14,18 +14,49 @@ This example shows how to customize the MCP Service Template for an e-commerce a
 
 ## 🏗️ Customization Steps
 
-### 1. Project Setup
+### 1. Automated Project Setup (Recommended)
 
 ```bash
-# Copy template
-cp -r mcp-service-template ecommerce-analytics-mcp
-
-# Rename main package
-cd ecommerce-analytics-mcp
-mv src/service_name_mcp src/ecommerce_analytics_mcp
+# Run the automated setup script
+python3 setup_template.py
 ```
 
-### 2. Update pyproject.toml
+**Configuration inputs for this example:**
+- **Target directory**: `../ecommerce-analytics-mcp`
+- **Service name**: `ecommerce_analytics`
+- **Display name**: `E-commerce Analytics`
+- **Description**: `E-commerce Analytics MCP Server providing AI agents with sales data and customer insights`
+- **Business domain**: `E-commerce Analytics`
+- **Author details**: Your team information
+
+The script will automatically:
+- Create a clean project copy at your target directory
+- Replace all template placeholders with your e-commerce analytics configuration
+- Rename directories (`service_name_mcp` → `ecommerce_analytics_mcp`)
+- Update all import statements throughout the codebase
+- Set up modern tooling with `pyproject.toml` and pre-commit hooks
+
+### 2. Alternative: Manual Setup (Advanced Users)
+
+If you need custom modifications during setup:
+
+```bash
+# Copy template to new directory
+cp -r mcp-service-template ecommerce-analytics-mcp
+cd ecommerce-analytics-mcp
+
+# Manually rename main package
+mv src/service_name_mcp src/ecommerce_analytics_mcp
+
+# Update placeholders throughout codebase
+# Replace {{service_name}} → ecommerce_analytics
+# Replace {{Service Name}} → E-commerce Analytics
+# etc.
+```
+
+### 3. Update pyproject.toml (If Using Manual Setup)
+
+**Note**: If you used the automated setup, this file is already configured. This section is only for manual setup.
 
 ```toml
 [project]
@@ -50,7 +81,9 @@ dependencies = [
 ecommerce-analytics-mcp = "ecommerce_analytics_mcp.server:main"
 ```
 
-### 3. Configure MCP Instance
+### 4. Configure MCP Instance (If Using Manual Setup)
+
+**Note**: If you used the automated setup, the basic configuration is already in place. You may want to customize the instructions further.
 
 ```python
 # src/ecommerce_analytics_mcp/mcp_instance.py
@@ -65,13 +98,13 @@ mcp = FastMCP(
     - Product performance metrics
     - Marketing campaign effectiveness
     - Real-time business intelligence dashboards
-    
+
     Always validate data quality and provide query traceability for business decisions.
     """
 )
 ```
 
-### 4. Domain Structure
+### 5. Domain Structure
 
 ```
 src/ecommerce_analytics_mcp/
@@ -106,7 +139,7 @@ src/ecommerce_analytics_mcp/
     └── best_practices.md
 ```
 
-### 5. Configuration
+### 6. Configuration
 
 ```python
 # src/ecommerce_analytics_mcp/common/config.py
@@ -117,25 +150,25 @@ class Config:
     # Service Configuration
     SERVICE_NAME = "ecommerce-analytics-mcp"
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    
+
     # Database Connections
     SALES_DB_URL = os.getenv("SALES_DB_URL", "")
     WAREHOUSE_CONNECTION = os.getenv("SNOWFLAKE_CONNECTION", "")
-    
+
     # API Credentials
     GOOGLE_ANALYTICS_CREDENTIALS = os.getenv("GA_CREDENTIALS_PATH", "")
     PRODUCT_API_KEY = os.getenv("PRODUCT_API_KEY", "")
     PRODUCT_API_BASE_URL = os.getenv("PRODUCT_API_BASE_URL", "")
-    
+
     # Feature Flags
     ENABLE_REAL_TIME_DATA = os.getenv("ENABLE_REAL_TIME", "true").lower() == "true"
     ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
     CACHE_TTL_MINUTES = int(os.getenv("CACHE_TTL_MINUTES", "15"))
-    
+
     # Business Rules
     FISCAL_YEAR_START_MONTH = int(os.getenv("FISCAL_YEAR_START", "1"))  # January
     DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "USD")
-    
+
     @classmethod
     def validate(cls) -> tuple[bool, Optional[str]]:
         required_vars = [
@@ -143,15 +176,15 @@ class Config:
             "WAREHOUSE_CONNECTION",
             "GOOGLE_ANALYTICS_CREDENTIALS"
         ]
-        
+
         for var in required_vars:
             if not getattr(cls, var):
                 return False, f"Missing required configuration: {var}"
-        
+
         return True, None
 ```
 
-### 6. Sales Domain Implementation
+### 7. Sales Domain Implementation
 
 ```python
 # src/ecommerce_analytics_mcp/sales_domain/sales_tools.py
@@ -176,24 +209,24 @@ def get_sales_metrics(
 ) -> Dict[str, Any]:
     """
     Retrieve comprehensive sales metrics including revenue, transactions, and growth rates.
-    
+
     Args:
         start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format  
+        end_date: End date in YYYY-MM-DD format
         currency: Currency code (defaults to USD)
         region: Geographic region filter
         product_category: Product category filter
     """
     try:
         currency = currency or Config.DEFAULT_CURRENCY
-        
+
         # Execute sales query
         query = SalesQueries.build_sales_metrics_query(
             start_date, end_date, currency, region, product_category
         )
-        
+
         results = execute_sales_query(query)
-        
+
         # Calculate additional metrics
         metrics = {
             "period": {"start": start_date, "end": end_date},
@@ -211,10 +244,10 @@ def get_sales_metrics(
                 "product_category": product_category
             }
         }
-        
+
         logger.info(f"Sales metrics retrieved for period {start_date} to {end_date}")
         return metrics
-        
+
     except Exception as e:
         logger.error(f"Error retrieving sales metrics: {str(e)}")
         return {"error": f"Failed to retrieve sales metrics: {str(e)}"}
@@ -227,7 +260,7 @@ def analyze_sales_trends(
 ) -> Dict[str, Any]:
     """
     Analyze sales trends over time with pattern detection.
-    
+
     Args:
         metric_type: Type of metric to analyze (revenue, transactions, units)
         time_period: Aggregation period (daily, weekly, monthly)
@@ -236,15 +269,15 @@ def analyze_sales_trends(
     try:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=lookback_days)
-        
+
         # Get trend data
         query = SalesQueries.build_trend_analysis_query(
-            metric_type, time_period, start_date.strftime("%Y-%m-%d"), 
+            metric_type, time_period, start_date.strftime("%Y-%m-%d"),
             end_date.strftime("%Y-%m-%d")
         )
-        
+
         trend_data = execute_sales_query(query)
-        
+
         # Perform trend analysis
         analysis = {
             "trend_direction": calculate_trend_direction(trend_data),
@@ -253,9 +286,9 @@ def analyze_sales_trends(
             "forecast": generate_short_term_forecast(trend_data),
             "data_points": trend_data
         }
-        
+
         return analysis
-        
+
     except Exception as e:
         logger.error(f"Error analyzing sales trends: {str(e)}")
         return {"error": f"Failed to analyze trends: {str(e)}"}
@@ -292,7 +325,7 @@ def generate_short_term_forecast(data: List[Dict]) -> Dict[str, Any]:
     return {"forecast_available": False}
 ```
 
-### 7. Customer Domain Implementation
+### 8. Customer Domain Implementation
 
 ```python
 # src/ecommerce_analytics_mcp/customer_domain/customer_tools.py
@@ -310,7 +343,7 @@ def customer_segmentation(
 ) -> Dict[str, Any]:
     """
     Segment customers based on behavior and demographics.
-    
+
     Args:
         segmentation_method: Method to use (rfm, behavioral, demographic)
         include_demographics: Whether to include demographic data
@@ -325,7 +358,7 @@ def customer_segmentation(
             return perform_demographic_segmentation()
         else:
             return {"error": f"Unknown segmentation method: {segmentation_method}"}
-            
+
     except Exception as e:
         logger.error(f"Error in customer segmentation: {str(e)}")
         return {"error": f"Segmentation failed: {str(e)}"}
@@ -338,7 +371,7 @@ def customer_lifetime_value(
 ) -> Dict[str, Any]:
     """
     Calculate customer lifetime value for individuals or segments.
-    
+
     Args:
         customer_id: Specific customer ID (optional)
         segment: Customer segment to analyze (optional)
@@ -351,7 +384,7 @@ def customer_lifetime_value(
             return calculate_segment_clv(segment, prediction_months)
         else:
             return calculate_overall_clv(prediction_months)
-            
+
     except Exception as e:
         logger.error(f"Error calculating CLV: {str(e)}")
         return {"error": f"CLV calculation failed: {str(e)}"}
@@ -392,7 +425,7 @@ def calculate_overall_clv(prediction_months: int) -> Dict[str, Any]:
     return {"message": "Overall CLV calculation not implemented - this is a template"}
 ```
 
-### 8. Custom Prompts
+### 9. Custom Prompts
 
 ```markdown
 <!-- src/ecommerce_analytics_mcp/core/prompts/sales_analyst_prompt.md -->
@@ -430,7 +463,7 @@ You are an expert e-commerce sales analyst specializing in revenue optimization 
 When analyzing sales data, always provide context about business impact and recommendations for action.
 ```
 
-### 9. Update Main Server
+### 10. Update Main Server
 
 ```python
 # src/ecommerce_analytics_mcp/server.py
@@ -450,18 +483,18 @@ def main():
     """Main entry point for the e-commerce analytics MCP server"""
     setup_logging(Config.LOG_LEVEL)
     logger = logging.getLogger(__name__)
-    
+
     # Validate configuration
     is_valid, error_msg = Config.validate()
     if not is_valid:
         logger.error(f"Configuration validation failed: {error_msg}")
         raise RuntimeError(f"Invalid configuration: {error_msg}")
-    
+
     logger.info("Starting E-commerce Analytics MCP Server")
     logger.info(f"Service: {Config.SERVICE_NAME}")
     logger.info(f"Real-time data: {Config.ENABLE_REAL_TIME_DATA}")
     logger.info(f"Caching: {Config.ENABLE_CACHING}")
-    
+
     # Run the MCP server
     mcp.run()
 
@@ -469,7 +502,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### 10. Environment Configuration
+### 11. Environment Configuration
 
 ```bash
 # .env file for development
@@ -495,7 +528,7 @@ FISCAL_YEAR_START=1
 DEFAULT_CURRENCY=USD
 ```
 
-### 11. Testing
+### 12. Testing
 
 ```python
 # tests/test_sales_tools.py
@@ -508,13 +541,13 @@ class TestSalesTools:
         """Test basic sales metrics retrieval"""
         start_date = "2024-01-01"
         end_date = "2024-01-31"
-        
+
         result = get_sales_metrics(start_date, end_date)
-        
+
         assert "period" in result
         assert result["period"]["start"] == start_date
         assert result["period"]["end"] == end_date
-        
+
     def test_sales_trends_analysis(self):
         """Test sales trend analysis"""
         result = analyze_sales_trends(
@@ -522,7 +555,7 @@ class TestSalesTools:
             time_period="daily",
             lookback_days=30
         )
-        
+
         assert "trend_direction" in result
         assert "data_points" in result
 ```
