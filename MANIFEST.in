@@ -1,0 +1,5 @@
+include src/service_name_mcp/*.md
+include src/service_name_mcp/**/*.md
+include README.md
+include docs/*.md
+include tests/test_data/*
