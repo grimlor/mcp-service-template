@@ -85,7 +85,7 @@ def read_csv_file(
                 row_count += 1
 
         # Analyze data
-        analysis = {
+        analysis: dict[str, Any] = {
             "file_info": {"path": file_path, "size_bytes": file_size, "encoding": encoding, "delimiter": delimiter},
             "structure": {
                 "total_rows_read": len(rows),
@@ -126,7 +126,7 @@ def read_csv_file(
         return {"error": f"Failed to read CSV: {str(e)}"}
 
 
-def analyze_csv_columns(data: list[dict], headers: list[str] | None) -> dict[str, Any]:
+def analyze_csv_columns(data: list[dict[str, Any]], headers: list[str] | None) -> dict[str, Any]:
     """Analyze CSV columns for data types and patterns"""
     if not data:
         return {}
@@ -266,7 +266,7 @@ def read_json_file(file_path: str, encoding: str = "utf-8") -> dict[str, Any]:
 def analyze_json_structure(data: Any, max_depth: int = 5) -> dict[str, Any]:
     """Analyze JSON structure and provide metadata"""
 
-    def get_structure(obj, depth=0):
+    def get_structure(obj: Any, depth: int = 0) -> Any:
         if depth > max_depth:
             return "..."
 
@@ -300,10 +300,10 @@ def analyze_json_structure(data: Any, max_depth: int = 5) -> dict[str, Any]:
     return {"type": type(data).__name__, "structure": get_structure(data), "size_estimate": estimate_json_size(data)}
 
 
-def estimate_json_size(obj) -> dict[str, int]:
+def estimate_json_size(obj: Any) -> dict[str, int]:
     """Estimate size characteristics of JSON object"""
 
-    def count_elements(obj):
+    def count_elements(obj: Any) -> int:
         if isinstance(obj, dict):
             return sum(count_elements(v) for v in obj.values()) + len(obj)
         elif isinstance(obj, list):
@@ -314,16 +314,16 @@ def estimate_json_size(obj) -> dict[str, int]:
     return {"total_elements": count_elements(obj), "depth": get_json_depth(obj)}
 
 
-def get_json_depth(obj, current_depth=0) -> int:
+def get_json_depth(obj: Any, current_depth: int = 0) -> int:
     """Calculate maximum depth of JSON object"""
     if isinstance(obj, dict):
         if not obj:
             return current_depth
-        return max(get_json_depth(v, current_depth + 1) for v in obj.values())
+        return max((get_json_depth(v, current_depth + 1) for v in obj.values()), default=current_depth)
     elif isinstance(obj, list):
         if not obj:
             return current_depth
-        return max(get_json_depth(item, current_depth + 1) for item in obj)
+        return max((get_json_depth(item, current_depth + 1) for item in obj), default=current_depth)
     else:
         return current_depth
 
@@ -401,14 +401,14 @@ def analyze_text_file(file_path: str, encoding: str = "utf-8", max_lines: int = 
         total_words = sum(len(line.split()) for line in lines)
 
         # Character frequency analysis
-        char_freq = {}
+        char_freq: dict[str, int] = {}
         for line in lines:
             for char in line.lower():
                 if char.isalpha():
                     char_freq[char] = char_freq.get(char, 0) + 1
 
         # Most common words
-        word_freq = {}
+        word_freq: dict[str, int] = {}
         for line in lines:
             words = re.findall(r"\b\w+\b", line.lower())
             for word in words:
@@ -503,16 +503,16 @@ def list_directory_files(
                 )
 
         # Sort by name
-        file_info.sort(key=lambda x: x["name"])
+        file_info.sort(key=lambda x: str(x["name"]))
 
         # Group by extension
-        extensions = {}
+        extensions: dict[str, dict[str, int]] = {}
         for file in file_info:
-            ext = file["extension"] or "no_extension"
+            ext = str(file["extension"]) or "no_extension"
             if ext not in extensions:
                 extensions[ext] = {"count": 0, "total_size": 0}
             extensions[ext]["count"] += 1
-            extensions[ext]["total_size"] += file["size_bytes"]
+            extensions[ext]["total_size"] += int(str(file["size_bytes"]))
 
         result = {
             "directory": directory_path,

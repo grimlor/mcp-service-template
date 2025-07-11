@@ -1,68 +1,43 @@
 """
-Test suite for SQLite Domain
+Test suite for SQLite Domain - Working Functions
 
-This module contains unit tests for SQLite database integration tools.
+This module contains unit tests for the actually implemented SQLite functions.
 """
 
 import os
-import sqlite3
 import tempfile
 from unittest.mock import patch
 
 import pytest
 
-# Note: These tests use the template placeholders and will work after setup_template.py is run
 
-
-class TestSQLiteTools:
-    """Test SQLite domain functionality."""
+class TestSQLiteWorkingTools:
+    """Test SQLite domain functionality - working functions only."""
 
     @pytest.fixture
     def temp_db(self):
         """Create a temporary SQLite database for testing."""
-        # Create a temporary file
-        db_fd, db_path = tempfile.mkstemp(suffix=".db")
-        os.close(db_fd)
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        yield path
+        if os.path.exists(path):
+            os.unlink(path)
 
-        # Initialize with test data
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+    @pytest.fixture
+    def sample_db(self):
+        """Create a sample database with test data."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_create_sample_database
 
-        # Create test tables
-        cursor.execute("""
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
 
-        cursor.execute("""
-            CREATE TABLE orders (
-                id INTEGER PRIMARY KEY,
-                user_id INTEGER,
-                product TEXT,
-                amount DECIMAL(10,2),
-                order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        """)
+        # Create sample database
+        result = sqlite_create_sample_database(database_path=path)
+        assert result["status"] == "success"
 
-        # Insert test data
-        cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", ("John Doe", "john@example.com"))
-        cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", ("Jane Smith", "jane@example.com"))
-        cursor.execute("INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)", (1, "Widget", 29.99))
-        cursor.execute("INSERT INTO orders (user_id, product, amount) VALUES (?, ?, ?)", (2, "Gadget", 49.99))
-
-        conn.commit()
-        conn.close()
-
-        yield db_path
-
-        # Cleanup
-        if os.path.exists(db_path):
-            os.unlink(db_path)
+        yield path
+        if os.path.exists(path):
+            os.unlink(path)
 
     def test_sqlite_tools_import(self):
         """Test that SQLite tools can be imported."""
@@ -74,161 +49,371 @@ class TestSQLiteTools:
             pytest.fail(f"Failed to import SQLite tools: {e}")
 
     @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
-    def test_execute_query_success(self, mock_logger, temp_db):
-        """Test successful query execution."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query
+    def test_sqlite_execute_query_success(self, mock_logger, sample_db):
+        """Test successful SQLite query execution."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
 
-        # Test simple SELECT query
-        result = execute_sql_query(
-            query="SELECT name, email FROM users WHERE id = ?", database_path=temp_db, parameters=(1,)
+        result = sqlite_execute_query(query="SELECT name, email FROM customers LIMIT 3", database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert result["status"] == "success"
+        assert "results" in result
+        assert "columns" in result
+        assert len(result["results"]) <= 3
+        assert "name" in result["columns"]
+        assert "email" in result["columns"]
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_execute_query_insert(self, mock_logger, sample_db):
+        """Test SQLite INSERT query execution."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
+
+        result = sqlite_execute_query(
+            query="INSERT INTO customers (name, email, city) VALUES ('Test User', 'test@example.com', 'Test City')",
+            database_path=sample_db,
         )
 
-        assert isinstance(result, list)
-        assert len(result) > 0
-        assert "John Doe" in str(result)
-        mock_logger.info.assert_called()
+        assert isinstance(result, dict)
+        assert result["status"] == "success"
+        assert "rows_affected" in result
+        assert result["rows_affected"] >= 1
 
     @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
-    def test_execute_query_with_limit(self, mock_logger, temp_db):
-        """Test query execution with result limit."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query
+    def test_sqlite_execute_query_not_found(self, mock_logger):
+        """Test SQLite query with non-existent database."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
 
-        result = execute_sql_query(query="SELECT * FROM users", database_path=temp_db, limit=1)
+        result = sqlite_execute_query(query="SELECT * FROM customers", database_path="/nonexistent/database.db")
 
-        assert isinstance(result, list)
-        assert len(result) <= 1
-
-    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
-    def test_execute_query_error_handling(self, mock_logger, temp_db):
-        """Test query execution error handling."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query
-
-        # Test invalid SQL
-        with pytest.raises(Exception):  # noqa: B017
-            execute_sql_query(query="SELECT * FROM nonexistent_table", database_path=temp_db)
-
-        mock_logger.error.assert_called()
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "Database file not found" in result["error"]
 
     @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
-    def test_get_schema_info(self, mock_logger, temp_db):
-        """Test schema information retrieval."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import get_schema_info
+    def test_sqlite_execute_query_invalid_sql(self, mock_logger, sample_db):
+        """Test SQLite query with invalid SQL."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
 
-        result = get_schema_info(database_path=temp_db)
+        result = sqlite_execute_query(query="INVALID SQL STATEMENT", database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "SQLite error" in result["error"]
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_get_table_schema_success(self, mock_logger, sample_db):
+        """Test successful table schema retrieval."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_get_table_schema
+
+        result = sqlite_get_table_schema(table_name="customers", database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert result["table_name"] == "customers"
+        assert "columns" in result
+        assert "column_count" in result
+        assert len(result["columns"]) > 0
+
+        # Check that we have expected columns
+        column_names = [col["name"] for col in result["columns"]]
+        assert "name" in column_names
+        assert "email" in column_names
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_get_table_schema_not_found(self, mock_logger, sample_db):
+        """Test table schema for non-existent table."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_get_table_schema
+
+        result = sqlite_get_table_schema(table_name="nonexistent_table", database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "not found" in result["error"].lower()
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_list_tables_success(self, mock_logger, sample_db):
+        """Test successful table listing."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_list_tables
+
+        result = sqlite_list_tables(database_path=sample_db)
 
         assert isinstance(result, dict)
         assert "tables" in result
-        assert len(result["tables"]) > 0
+        assert "table_count" in result
+        assert result["table_count"] >= 4  # customers, products, orders, order_items
 
-        # Check that our test tables are present
+        # Check that expected tables exist
         table_names = [table["name"] for table in result["tables"]]
-        assert "users" in table_names
+        assert "customers" in table_names
+        assert "products" in table_names
         assert "orders" in table_names
 
     @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
-    def test_get_table_sample(self, mock_logger, temp_db):
-        """Test table data sampling."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import get_table_sample
+    def test_sqlite_list_tables_not_found(self, mock_logger):
+        """Test table listing with non-existent database."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_list_tables
 
-        result = get_table_sample(table_name="users", database_path=temp_db, sample_size=5)
+        result = sqlite_list_tables(database_path="/nonexistent/database.db")
 
-        assert isinstance(result, list)
-        assert len(result) <= 5
-        # Should have our test data
-        assert len(result) == 2  # We inserted 2 users
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "Database file not found" in result["error"]
 
-    def test_database_path_validation(self, temp_db):
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_sample_table_data_success(self, mock_logger, sample_db):
+        """Test successful table data sampling."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_sample_table_data
+
+        result = sqlite_sample_table_data(table_name="customers", limit=3, database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert result["status"] == "success"
+        assert "results" in result
+        assert "sampling_info" in result
+        assert len(result["results"]) <= 3
+        assert result["sampling_info"]["table_name"] == "customers"
+        assert result["sampling_info"]["limit_requested"] == 3
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_sample_table_data_invalid_limit(self, mock_logger, sample_db):
+        """Test table data sampling with invalid limit."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_sample_table_data
+
+        result = sqlite_sample_table_data(
+            table_name="customers",
+            limit=2000,  # Over the 1000 limit
+            database_path=sample_db,
+        )
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "Limit must be between" in result["error"]
+
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_create_sample_database_success(self, mock_logger):
+        """Test successful sample database creation."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_create_sample_database
+
+        fd, temp_path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        try:
+            result = sqlite_create_sample_database(database_path=temp_path)
+
+            assert isinstance(result, dict)
+            assert result["status"] == "success"
+            assert "tables_created" in result
+            assert len(result["tables_created"]) >= 4
+            assert "customers" in result["tables_created"]
+            assert "products" in result["tables_created"]
+            assert os.path.exists(temp_path)
+        finally:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    def test_sqlite_connection_caching(self, sample_db):
+        """Test SQLite connection caching functionality."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import get_sqlite_connection
+
+        # Get first connection
+        conn1 = get_sqlite_connection(sample_db)
+        assert conn1 is not None
+
+        # Get second connection - should be cached
+        conn2 = get_sqlite_connection(sample_db)
+        assert conn2 is conn1  # Should be the same object
+
+    def test_sqlite_database_path_validation(self, temp_db):
         """Test database path validation."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
 
-        # Test with non-existent database
-        with pytest.raises(Exception):  # noqa: B017
-            execute_sql_query(query="SELECT 1", database_path="/nonexistent/path/db.sqlite")
+        # Test with non-existent directory
+        result = sqlite_execute_query(query="SELECT 1", database_path="/nonexistent/path/database.db")
 
-    def test_sql_injection_protection(self, temp_db):
-        """Test SQL injection protection through parameterized queries."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query
+        assert isinstance(result, dict)
+        assert "error" in result
 
-        # This should work safely with parameters
-        malicious_input = "'; DROP TABLE users; --"
-        result = execute_sql_query(
-            query="SELECT * FROM users WHERE name = ?", database_path=temp_db, parameters=(malicious_input,)
-        )
+    @patch("service_name_mcp.sqlite_domain.sqlite_tools.logger")
+    def test_sqlite_complex_query(self, mock_logger, sample_db):
+        """Test complex SQL query execution."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
 
-        # Should return empty result, not cause error
-        assert isinstance(result, list)
-        assert len(result) == 0
+        # Complex query with JOIN
+        query = """
+        SELECT c.name, c.email, COUNT(o.id) as order_count
+        FROM customers c
+        LEFT JOIN orders o ON c.id = o.customer_id
+        GROUP BY c.id, c.name, c.email
+        ORDER BY order_count DESC
+        """
 
-        # Verify table still exists
-        schema = execute_sql_query(
-            query="SELECT name FROM sqlite_master WHERE type='table' AND name='users'", database_path=temp_db
-        )
-        assert len(schema) == 1
+        result = sqlite_execute_query(query=query, database_path=sample_db)
+
+        assert isinstance(result, dict)
+        assert result["status"] == "success"
+        assert "results" in result
+        assert len(result["results"]) > 0
+
+    def test_sqlite_row_factory_functionality(self, sample_db):
+        """Test that row factory returns dict-like results."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
+
+        result = sqlite_execute_query(query="SELECT name, email FROM customers LIMIT 1", database_path=sample_db)
+
+        assert result["status"] == "success"
+        assert len(result["results"]) > 0
+
+        # Results should be dictionaries, not tuples
+        first_row = result["results"][0]
+        assert isinstance(first_row, dict)
+        assert "name" in first_row
+        assert "email" in first_row
 
 
-class TestSQLiteBestPractices:
-    """Test SQLite best practices and documentation."""
-
-    def test_best_practices_file_exists(self):
-        """Test that best practices documentation exists."""
-        from pathlib import Path
-
-        # Get the path to the best practices file
-        current_dir = Path(__file__).parent.parent.parent
-        best_practices_path = current_dir / "src" / "service_name_mcp" / "sqlite_domain" / "best_practices.md"
-
-        assert best_practices_path.exists(), "SQLite best practices file should exist"
-
-        # Verify it has content
-        content = best_practices_path.read_text()
-        assert len(content) > 100, "Best practices should have substantial content"
-        assert "SQLite" in content, "Best practices should mention SQLite"
-
-
-# Integration tests
 class TestSQLiteIntegration:
     """Integration tests for SQLite domain."""
 
     def test_mcp_tool_registration(self):
         """Test that SQLite tools are properly registered with MCP."""
         try:
-            # Import the tools module to trigger registration
             from service_name_mcp.mcp_instance import mcp
 
-            # This test verifies that import doesn't fail
-            # The actual tool registration testing would require MCP framework testing
             assert mcp is not None
-
         except ImportError as e:
             pytest.fail(f"Failed to register SQLite tools with MCP: {e}")
 
     @pytest.mark.integration
-    def test_end_to_end_workflow(self, temp_db):
+    def test_end_to_end_sqlite_workflow(self):
         """Test complete SQLite workflow."""
-        from service_name_mcp.sqlite_domain.sqlite_tools import execute_sql_query, get_schema_info, get_table_sample
-
-        # 1. Get schema
-        schema = get_schema_info(database_path=temp_db)
-        assert "tables" in schema
-
-        # 2. Sample data from a table
-        sample = get_table_sample(table_name="users", database_path=temp_db)
-        assert len(sample) > 0
-
-        # 3. Execute analytical query
-        result = execute_sql_query(
-            query="""
-                SELECT u.name, COUNT(o.id) as order_count, SUM(o.amount) as total_spent
-                FROM users u
-                LEFT JOIN orders o ON u.id = o.user_id
-                GROUP BY u.id, u.name
-                ORDER BY total_spent DESC
-            """,
-            database_path=temp_db,
+        from service_name_mcp.sqlite_domain.sqlite_tools import (
+            sqlite_create_sample_database,
+            sqlite_execute_query,
+            sqlite_get_table_schema,
+            sqlite_list_tables,
+            sqlite_sample_table_data,
         )
 
-        assert len(result) > 0
-        assert isinstance(result[0], tuple)
+        fd, temp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        try:
+            # 1. Create sample database
+            create_result = sqlite_create_sample_database(database_path=temp_db)
+            assert create_result["status"] == "success"
+
+            # 2. List tables
+            tables_result = sqlite_list_tables(database_path=temp_db)
+            assert len(tables_result["tables"]) >= 4
+
+            # 3. Get schema for a table
+            schema_result = sqlite_get_table_schema(table_name="customers", database_path=temp_db)
+            assert "columns" in schema_result
+
+            # 4. Sample data from table
+            sample_result = sqlite_sample_table_data(table_name="customers", limit=5, database_path=temp_db)
+            assert sample_result["status"] == "success"
+
+            # 5. Execute complex query
+            query_result = sqlite_execute_query(query="SELECT COUNT(*) as total FROM customers", database_path=temp_db)
+            assert query_result["status"] == "success"
+            assert len(query_result["results"]) == 1
+
+        finally:
+            if os.path.exists(temp_db):
+                os.unlink(temp_db)
+
+    @pytest.mark.integration
+    def test_data_consistency_workflow(self):
+        """Test data consistency across operations."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import (
+            sqlite_create_sample_database,
+            sqlite_execute_query,
+            sqlite_sample_table_data,
+        )
+
+        fd, temp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        try:
+            # Create database with sample data
+            sqlite_create_sample_database(database_path=temp_db)
+
+            # Count total customers
+            count_result = sqlite_execute_query(query="SELECT COUNT(*) as total FROM customers", database_path=temp_db)
+            total_customers = count_result["results"][0]["total"]
+
+            # Sample all customers
+            sample_result = sqlite_sample_table_data(table_name="customers", limit=100, database_path=temp_db)
+
+            # Verify consistency
+            assert len(sample_result["results"]) == total_customers
+            assert sample_result["sampling_info"]["sample_size"] == total_customers
+
+        finally:
+            if os.path.exists(temp_db):
+                os.unlink(temp_db)
+
+
+class TestSQLiteErrorHandling:
+    """Test SQLite error handling scenarios."""
+
+    def test_connection_error_handling(self):
+        """Test handling of connection errors."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_execute_query
+
+        # Test with completely invalid path
+        result = sqlite_execute_query(query="SELECT 1", database_path="\x00invalid\x00path")
+
+        assert isinstance(result, dict)
+        assert "error" in result
+
+    def test_sql_syntax_error_handling(self):
+        """Test handling of SQL syntax errors."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import sqlite_create_sample_database, sqlite_execute_query
+
+        fd, temp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        try:
+            sqlite_create_sample_database(database_path=temp_db)
+
+            # Execute invalid SQL
+            result = sqlite_execute_query(
+                query="SELECT * FROM nonexistent_table WHERE invalid syntax", database_path=temp_db
+            )
+
+            assert isinstance(result, dict)
+            assert "error" in result
+            assert "SQLite error" in result["error"]
+
+        finally:
+            if os.path.exists(temp_db):
+                os.unlink(temp_db)
+
+    def test_table_not_found_handling(self):
+        """Test handling when tables don't exist."""
+        from service_name_mcp.sqlite_domain.sqlite_tools import (
+            sqlite_create_sample_database,
+            sqlite_get_table_schema,
+            sqlite_sample_table_data,
+        )
+
+        fd, temp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        try:
+            sqlite_create_sample_database(database_path=temp_db)
+
+            # Test schema for non-existent table
+            schema_result = sqlite_get_table_schema(table_name="does_not_exist", database_path=temp_db)
+            assert "error" in schema_result
+
+            # Test sampling non-existent table
+            sample_result = sqlite_sample_table_data(table_name="does_not_exist", database_path=temp_db)
+            assert "error" in sample_result
+
+        finally:
+            if os.path.exists(temp_db):
+                os.unlink(temp_db)
 
 
 if __name__ == "__main__":

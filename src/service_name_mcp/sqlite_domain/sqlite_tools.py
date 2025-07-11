@@ -57,7 +57,7 @@ def sqlite_execute_query(query: str, database_path: str | None = None) -> dict[s
     """
     try:
         # Use default database path if not provided
-        db_path = database_path or getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db")
+        db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
 
         # Validate database exists
         if not os.path.exists(db_path):
@@ -122,7 +122,7 @@ def sqlite_get_table_schema(table_name: str, database_path: str | None = None) -
         Dictionary containing table schema information
     """
     try:
-        db_path = database_path or getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db")
+        db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
 
         if not os.path.exists(db_path):
             return {"error": f"Database file not found: {db_path}"}
@@ -174,7 +174,7 @@ def sqlite_list_tables(database_path: str | None = None) -> dict[str, Any]:
         Dictionary containing list of tables and metadata
     """
     try:
-        db_path = database_path or getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db")
+        db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
 
         if not os.path.exists(db_path):
             return {"error": f"Database file not found: {db_path}"}
@@ -226,7 +226,7 @@ def sqlite_sample_table_data(table_name: str, limit: int = 10, database_path: st
         Dictionary containing sample data and metadata
     """
     try:
-        db_path = database_path or getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db")
+        db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
 
         if not os.path.exists(db_path):
             return {"error": f"Database file not found: {db_path}"}
@@ -236,7 +236,7 @@ def sqlite_sample_table_data(table_name: str, limit: int = 10, database_path: st
             return {"error": "Limit must be between 1 and 1000"}
 
         query = f"SELECT * FROM {table_name} LIMIT {limit}"
-        result = sqlite_execute_query(query, db_path)
+        result: dict[str, Any] = sqlite_execute_query(query, db_path)
 
         if "error" in result:
             return result

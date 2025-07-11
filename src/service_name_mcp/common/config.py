@@ -56,7 +56,7 @@ class Config:
         Raises:
             ValueError: If required configuration is missing
         """
-        required_configs = [
+        required_configs: list[tuple[str, str | None]] = [
             # Add your required configuration keys here
             # ("DATABASE_URL", cls.DATABASE_URL),
             # ("API_KEY", cls.API_KEY),

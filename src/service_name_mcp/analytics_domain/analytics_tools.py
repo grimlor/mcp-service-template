@@ -86,7 +86,7 @@ def contribution_analysis(
         # Mock implementation for template
         analysis_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        mock_results = [
+        mock_results: list[dict[str, Any]] = [
             {
                 "TableType": "OverallSummary",
                 "Title": f"{metric.replace('_', ' ').title()} - Overall Performance",
@@ -164,7 +164,7 @@ def get_analytics_dimensions() -> list[dict[str, Any]]:
         List of available dimensions organized by category
     """
     # TODO: Update with your domain-specific dimensions and metrics
-    result = []
+    result: list[dict[str, Any]] = []
 
     # Example dimension categories - customize for your domain
     dimension_categories = {
@@ -295,7 +295,8 @@ def get_contribution_dimensions() -> list[dict[str, Any]]:
     Alias for get_analytics_dimensions for backward compatibility.
     Returns available dimensions and supported metrics for contribution analysis.
     """
-    return get_analytics_dimensions()
+    dimensions: list[dict[str, Any]] = get_analytics_dimensions()
+    return dimensions
 
 
 # TODO: Implement domain-specific analytics functions

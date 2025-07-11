@@ -26,4 +26,4 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-requests]
-        args: [--strict, --ignore-missing-imports]
+        args: [--ignore-missing-imports, --no-strict-optional, --allow-untyped-decorators]

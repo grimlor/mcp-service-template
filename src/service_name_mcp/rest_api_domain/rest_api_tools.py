@@ -35,8 +35,6 @@ def get_http_session() -> requests.Session:
         _session.headers.update(
             {"User-Agent": "MCP-Service-Template/1.0", "Accept": "application/json", "Content-Type": "application/json"}
         )
-        # Set reasonable timeouts
-        _session.timeout = 30
         logger.info("Created new HTTP session")
 
     return _session
@@ -427,7 +425,7 @@ def make_http_request(
             return {"error": f"Invalid HTTP method: {method}", "valid_methods": valid_methods}
 
         # Prepare request arguments
-        request_kwargs = {
+        request_kwargs: dict[str, Any] = {
             "timeout": min(timeout, 60)  # Cap at 60 seconds
         }
 
@@ -445,7 +443,7 @@ def make_http_request(
         response = session.request(method.upper(), url, **request_kwargs)
 
         # Prepare result
-        result = {
+        result: dict[str, Any] = {
             "request": {
                 "url": url,
                 "method": method.upper(),

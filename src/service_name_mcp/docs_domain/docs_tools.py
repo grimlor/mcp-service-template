@@ -126,7 +126,7 @@ def search_documentation(
         filtered_results = [
             result
             for result in mock_results
-            if any(term.lower() in result["contentSnippet"].lower() for term in search_text.split())
+            if any(term.lower() in str(result["contentSnippet"]).lower() for term in search_text.split())
         ]
 
         logger.info(f"Search completed successfully. Found {len(filtered_results)} results")
