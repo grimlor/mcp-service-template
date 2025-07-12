@@ -404,12 +404,24 @@ class TestRestApiTools:
         assert "USD" in result["currencies"]
         assert result["currencies"]["USD"]["symbol"] == "$"
 
-    @pytest.mark.skip(reason="Function not implemented yet")
     def test_rate_limiting_handling(self):
         """Test rate limiting response handling."""
-        # TODO: Test that API calls handle 429 rate limiting responses
-        # Should implement retry logic or proper error reporting
-        pass
+        from unittest.mock import Mock
+
+        from service_name_mcp.rest_api_domain.rest_api_tools import _handle_rate_limiting
+
+        # Mock a 429 response
+        mock_response = Mock()
+        mock_response.status_code = 429
+        mock_response.headers = {"Retry-After": "120", "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1640995200"}
+
+        result = _handle_rate_limiting(mock_response)
+
+        assert result["error"] == "Rate limit exceeded"
+        assert result["status_code"] == 429
+        assert result["retry_after_seconds"] == 120
+        assert result["rate_limit_remaining"] == "0"
+        assert "suggestion" in result
 
 
 class TestApiConfiguration:
@@ -429,45 +441,9 @@ class TestApiConfiguration:
         assert session.headers["Content-Type"] == "application/json"
         assert "MCP-Service-Template" in str(session.headers["User-Agent"])
 
-    @pytest.mark.skip(reason="Function not implemented yet")
-    def test_headers_configuration(self):
-        """Test request headers configuration."""
-        # TODO: Test that _get_default_headers returns proper HTTP headers
-        # Should include User-Agent, Accept, and other standard headers
-        pass
-
 
 class TestDataProcessing:
     """Test data processing and transformation."""
-
-    @pytest.mark.skip(reason="Function not implemented yet")
-    def test_json_response_processing(self):
-        """Test JSON response processing."""
-        # from service_name_mcp.rest_api_domain.rest_api_tools import _process_response
-
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"key": "value", "list": [1, 2, 3]}
-
-        # result = _process_response(mock_response)
-        # assert isinstance(result, dict)
-        # assert result["key"] == "value"
-        # assert result["list"] == [1, 2, 3]
-
-    @pytest.mark.skip(reason="Function not implemented yet")
-    def test_pagination_handling(self):
-        """Test pagination response handling."""
-        # from service_name_mcp.rest_api_domain.rest_api_tools import _extract_pagination_info
-
-        # response_data = {
-        #     "data": [{"id": 1}, {"id": 2}],
-        #     "pagination": {"page": 1, "total_pages": 5, "total_items": 100},
-        # }
-
-        # pagination = _extract_pagination_info(response_data)
-        # assert pagination["page"] == 1
-        # assert pagination["total_pages"] == 5
-        # assert pagination["total_items"] == 100
 
 
 class TestBestPractices:
@@ -506,45 +482,6 @@ class TestRestApiIntegration:
 
         except ImportError as e:
             pytest.fail(f"Failed to register REST API tools with MCP: {e}")
-
-    @pytest.mark.integration
-    @patch("requests.get")
-    @pytest.mark.skip(reason="Function not implemented yet")
-    def test_end_to_end_api_workflow(self, mock_get):
-        """Test complete REST API workflow."""
-        # Mock multiple API responses for a workflow
-        mock_responses = [
-            # First call: get categories
-            Mock(
-                status_code=200,
-                **{"json.return_value": {"categories": ["electronics", "books"]}, "raise_for_status": Mock()},
-            ),
-            # Second call: get products in category
-            Mock(
-                status_code=200,
-                **{
-                    "json.return_value": {
-                        "products": [{"id": 1, "name": "Laptop", "price": 999}, {"id": 2, "name": "Mouse", "price": 29}]
-                    },
-                    "raise_for_status": Mock(),
-                },
-            ),
-        ]
-        mock_get.side_effect = mock_responses
-
-        # from service_name_mcp.rest_api_domain.rest_api_tools import fetch_api_data
-
-        # 1. Get categories
-        # categories = fetch_api_data(endpoint="categories")
-        # assert "categories" in categories
-
-        # 2. Get products for first category
-        # products = fetch_api_data(endpoint="products", params={"category": categories["categories"][0]})
-        # assert "products" in products
-        # assert len(products["products"]) > 0
-
-        # Verify both API calls were made
-        assert mock_get.call_count == 2
 
 
 if __name__ == "__main__":

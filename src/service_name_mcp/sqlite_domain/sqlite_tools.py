@@ -55,10 +55,10 @@ def sqlite_execute_query(query: str, database_path: str | None = None) -> dict[s
     Returns:
         Dictionary containing query results and metadata
     """
-    try:
-        # Use default database path if not provided
-        db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
+    # Use default database path if not provided
+    db_path: str = database_path or str(getattr(Config, "DEFAULT_SQLITE_DB", "./data/sample.db"))
 
+    try:
         # Validate database exists
         if not os.path.exists(db_path):
             return {
@@ -102,7 +102,7 @@ def sqlite_execute_query(query: str, database_path: str | None = None) -> dict[s
         return {
             "error": f"SQLite error: {str(e)}",
             "query": query,
-            "database": db_path if "db_path" in locals() else "unknown",
+            "database": db_path,
         }
     except Exception as e:
         logger.error(f"Unexpected error executing SQLite query: {str(e)}")

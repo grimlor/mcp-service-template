@@ -32,12 +32,89 @@ def get_http_session() -> requests.Session:
     global _session
     if _session is None:
         _session = requests.Session()
-        _session.headers.update(
-            {"User-Agent": "MCP-Service-Template/1.0", "Accept": "application/json", "Content-Type": "application/json"}
-        )
+        _session.headers.update(_get_default_headers())
         logger.info("Created new HTTP session")
 
     return _session
+
+
+def _get_default_headers() -> dict[str, str]:
+    """Get default HTTP headers for API requests.
+
+    Returns:
+        Dictionary containing standard HTTP headers
+    """
+    return {"User-Agent": "MCP-Service-Template/1.0", "Accept": "application/json", "Content-Type": "application/json"}
+
+
+def _process_response(response: requests.Response) -> dict[str, Any]:
+    """Process HTTP response and extract data.
+
+    Args:
+        response: requests.Response object
+
+    Returns:
+        Dictionary containing processed response data
+    """
+    try:
+        # Try to parse as JSON first
+        data = response.json()
+        return {
+            "status_code": response.status_code,
+            "data": data,
+            "content_type": "json",
+            "headers": dict(response.headers),
+        }
+    except ValueError:
+        # Fall back to text if JSON parsing fails
+        return {
+            "status_code": response.status_code,
+            "data": response.text,
+            "content_type": "text",
+            "headers": dict(response.headers),
+        }
+
+
+def _extract_pagination_info(response_data: dict[str, Any]) -> dict[str, Any]:
+    """Extract pagination information from API response.
+
+    Args:
+        response_data: Response data dictionary
+
+    Returns:
+        Dictionary containing pagination info
+    """
+    pagination = response_data.get("pagination", {})
+
+    return {
+        "page": pagination.get("page", 1),
+        "total_pages": pagination.get("total_pages", 1),
+        "total_items": pagination.get("total_items", 0),
+        "has_next": pagination.get("page", 1) < pagination.get("total_pages", 1),
+        "has_previous": pagination.get("page", 1) > 1,
+    }
+
+
+def _handle_rate_limiting(response: requests.Response) -> dict[str, Any]:
+    """Handle rate limiting responses (429 status code).
+
+    Args:
+        response: requests.Response object with 429 status
+
+    Returns:
+        Dictionary containing rate limit info and retry guidance
+    """
+    headers = response.headers
+    retry_after = headers.get("Retry-After", "60")
+
+    return {
+        "error": "Rate limit exceeded",
+        "status_code": 429,
+        "retry_after_seconds": int(retry_after) if retry_after.isdigit() else 60,
+        "rate_limit_remaining": headers.get("X-RateLimit-Remaining", "0"),
+        "rate_limit_reset": headers.get("X-RateLimit-Reset", ""),
+        "suggestion": f"Wait {retry_after} seconds before making another request",
+    }
 
 
 @mcp.tool(description="Get current weather data from a free weather API")
@@ -53,11 +130,11 @@ def get_weather_data(city: str, country_code: str | None = None, units: str = "m
     Returns:
         Dictionary containing weather data and metadata
     """
+    location = city
     try:
         session = get_http_session()
 
         # Build location string
-        location = city
         if country_code:
             location += f",{country_code}"
 
@@ -483,3 +560,92 @@ def make_http_request(
     except Exception as e:
         logger.error(f"Unexpected error making HTTP request: {str(e)}")
         return {"error": f"Unexpected error: {str(e)}"}
+
+
+@mcp.tool(description="Fetch data from any API endpoint with advanced features")
+def fetch_api_data(
+    endpoint: str,
+    base_url: str = "https://jsonplaceholder.typicode.com",
+    params: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    timeout: int = 30,
+) -> dict[str, Any]:
+    """
+    Fetch data from an API endpoint with built-in error handling and data processing.
+
+    Args:
+        endpoint: API endpoint path (e.g., "posts", "users", "categories")
+        base_url: Base URL for the API (defaults to JSONPlaceholder)
+        params: URL parameters to include in the request
+        headers: Additional headers to send with the request
+        timeout: Request timeout in seconds
+
+    Returns:
+        Dictionary containing API response data and metadata
+    """
+    try:
+        session = get_http_session()
+
+        # Build full URL
+        url = f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+
+        # Prepare request arguments
+        request_kwargs: dict[str, Any] = {
+            "timeout": min(timeout, 60),
+            "params": params or {},
+        }
+
+        # Merge headers if provided
+        if headers:
+            request_kwargs["headers"] = {**session.headers, **headers}
+
+        # Make the request
+        response = session.get(url, **request_kwargs)
+
+        # Handle rate limiting
+        if response.status_code == 429:
+            return _handle_rate_limiting(response)
+
+        # Raise for other HTTP errors
+        response.raise_for_status()
+
+        # Process the response
+        processed_response = _process_response(response)
+        data = processed_response["data"]
+
+        # Extract pagination info if present
+        pagination_info = None
+        if isinstance(data, dict) and any(key in data for key in ["pagination", "page", "total_pages"]):
+            pagination_info = _extract_pagination_info(data)
+
+        result = {
+            "endpoint": endpoint,
+            "url": url,
+            "status": "success",
+            "data": data,
+            "metadata": {
+                "status_code": response.status_code,
+                "content_type": processed_response["content_type"],
+                "timestamp": datetime.now().isoformat(),
+                "response_time_seconds": response.elapsed.total_seconds(),
+                "headers": processed_response["headers"],
+            },
+        }
+
+        # Add pagination info if available
+        if pagination_info:
+            result["pagination"] = pagination_info
+
+        logger.info(f"Successfully fetched data from {endpoint}")
+        return result
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"HTTP request error for {endpoint}: {str(e)}")
+        return {
+            "error": f"Failed to fetch data from {endpoint}: {str(e)}",
+            "endpoint": endpoint,
+            "suggestion": "Check internet connection and endpoint URL",
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error fetching data from {endpoint}: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}", "endpoint": endpoint}
